@@ -1,0 +1,18 @@
+{
+  "name": "Dead Air — Generate",
+  "short_name": "DEAD AIR",
+  "description": "Wan2.2 video generation interface",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0804",
+  "theme_color": "#0A0804",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230A0804'/><rect x='12' y='12' width='168' height='168' fill='none' stroke='%23E8960A' stroke-width='8'/><text x='96' y='130' font-family='serif' font-size='100' font-weight='bold' fill='%23E8960A' text-anchor='middle'>D</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

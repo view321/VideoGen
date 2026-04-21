@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DEAD AIR">
+<meta name="theme-color" content="#0A0804">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230A0804'/><rect x='12' y='12' width='168' height='168' fill='none' stroke='%23E8960A' stroke-width='8'/><text x='96' y='130' font-family='serif' font-size='100' font-weight='bold' fill='%23E8960A' text-anchor='middle'>D</text></svg>">
+<title>DEAD AIR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap');
+
+:root {
+  --amber: #E8960A;
+  --amber-dim: #7A4E05;
+  --amber-glow: rgba(232,150,10,0.12);
+  --dark: #0A0804;
+  --darker: #060503;
+  --surface: #110E08;
+  --border: #2A2015;
+  --border-lit: #4A3820;
+  --text: #C8A86A;
+  --text-dim: #5A4830;
+  --text-bright: #F0D090;
+  --success: #4A8A3A;
+  --error: #8A2A2A;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Courier Prime', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ── App shell ─────────────────────────────────────────────────────────── */
+
+.app-header {
+  flex-shrink: 0;
+  padding: calc(var(--safe-top) + 12px) 16px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--dark);
+  position: relative;
+}
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber-dim), transparent);
+}
+
+.header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  letter-spacing: 6px;
+  color: var(--amber);
+  text-shadow: 0 0 16px var(--amber-dim);
+  line-height: 1;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.dot.ok  { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.dot.err { background: var(--error); }
+.dot.run { background: var(--amber); animation: blink 0.9s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+/* ── Nav tabs ──────────────────────────────────────────────────────────── */
+.nav-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--darker);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.tab.active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+}
+.tab-badge {
+  display: inline-block;
+  background: var(--amber-dim);
+  color: var(--amber);
+  font-size: 9px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 0;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* ── Scroll area ───────────────────────────────────────────────────────── */
+.panels {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  padding-bottom: calc(var(--safe-bot) + 16px);
+}
+.panel.active { display: block; }
+
+/* ── Form elements ─────────────────────────────────────────────────────── */
+.section {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.section-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--amber-dim);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+input[type=text], input[type=password], input[type=number], textarea, select {
+  width: 100%;
+  background: var(--darker);
+  border: 1px solid var(--border);
+  color: var(--text-bright);
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  padding: 9px 10px;
+  outline: none;
+  -webkit-appearance: none;
+  border-radius: 0;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus { border-color: var(--amber-dim); }
+textarea { resize: vertical; min-height: 72px; }
+
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Range */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%; height: 2px;
+  background: var(--border-lit);
+  outline: none; margin: 10px 0 4px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  background: var(--amber);
+  border-radius: 0; cursor: pointer;
+}
+.range-val {
+  font-size: 12px;
+  color: var(--text-bright);
+  text-align: right;
+  margin-top: -2px;
+}
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.toggle-text { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.tslider { position: absolute; inset: 0; background: var(--border); cursor: pointer; transition: 0.2s; }
+.tslider::before {
+  content: ''; position: absolute;
+  left: 3px; top: 3px; width: 16px; height: 16px;
+  background: var(--text-dim); transition: 0.2s;
+}
+.toggle input:checked + .tslider { background: var(--amber-dim); }
+.toggle input:checked + .tslider::before { transform: translateX(18px); background: var(--amber); }
+
+/* Image zones */
+.img-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.img-zone-wrap { }
+.img-zone-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; text-align: center; margin-bottom: 5px; }
+.img-zone {
+  border: 1px dashed var(--border-lit);
+  background: var(--darker);
+  min-height: 100px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: border-color 0.15s;
+}
+.img-zone:active { border-color: var(--amber); background: var(--amber-glow); }
+.img-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.img-zone-icon { font-size: 20px; color: var(--amber-dim); }
+.img-zone-hint { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+.img-zone img { width: 100%; max-height: 120px; object-fit: cover; display: none; }
+.img-zone img.show { display: block; }
+.img-zone-icon.hide, .img-zone-hint.hide { display: none; }
+.img-fname { font-size: 9px; color: var(--amber-dim); padding: 0 4px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* Generate button */
+.gen-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 5px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin: 16px 16px 0;
+  width: calc(100% - 32px);
+  position: relative;
+  overflow: hidden;
+}
+.gen-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s;
+}
+.gen-btn:active::after { transform: scaleX(1); }
+.gen-btn:active .gen-btn-text { color: var(--dark); }
+.gen-btn-text { position: relative; z-index: 1; }
+.gen-btn:disabled { border-color: var(--border-lit); color: var(--text-dim); pointer-events: none; }
+
+/* ── Jobs list ─────────────────────────────────────────────────────────── */
+.jobs-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.job-item {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.job-item:active { background: var(--surface); }
+.job-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.job-item-id { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.job-item-status {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+}
+.job-item-status.pending  { color: var(--amber); border: 1px solid var(--amber-dim); }
+.job-item-status.completed { color: var(--success); border: 1px solid var(--success); }
+.job-item-status.failed   { color: var(--error); border: 1px solid var(--error); }
+.job-item-time { font-size: 10px; color: var(--text-dim); }
+.job-progress { height: 1px; background: var(--border); margin-top: 8px; }
+.job-progress-fill {
+  height: 100%;
+  background: var(--amber);
+  width: 30%;
+  animation: scan 1.2s infinite;
+}
+@keyframes scan { 0%{margin-left:0;width:30%} 100%{margin-left:100%;width:30%} }
+.job-progress-fill.done { animation: none; width: 100%; background: var(--success); }
+.job-progress-fill.fail { animation: none; width: 100%; background: var(--error); }
+
+/* ── Job detail modal ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 500;
+  display: none;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 16px) 0 calc(var(--safe-bot) + 16px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-lit);
+  margin: 0 12px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; color: var(--amber); }
+.modal-close {
+  background: none; border: 1px solid var(--border-lit);
+  color: var(--text-dim); font-family: 'Courier Prime', monospace;
+  font-size: 12px; padding: 4px 10px; cursor: pointer; letter-spacing: 1px;
+}
+.modal-body { padding: 16px; flex: 1; overflow-y: auto; }
+.modal-field { margin-bottom: 12px; }
+.modal-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+.modal-value { font-size: 12px; color: var(--text-bright); word-break: break-all; }
+.modal-video { width: 100%; border: 1px solid var(--border-lit); margin-top: 12px; }
+.modal-dl {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  background: var(--darker);
+  border: 1px solid var(--border-lit);
+  color: var(--amber-dim);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-decoration: none;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* ── Settings panel ────────────────────────────────────────────────────── */
+.settings-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* ── Log ───────────────────────────────────────────────────────────────── */
+.log-box {
+  background: var(--darker);
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 10px;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0 16px 16px;
+  border: 1px solid var(--border);
+  display: none;
+}
+.log-box.show { display: block; }
+.ll { padding: 2px 0; border-bottom: 1px solid var(--border); }
+.ll:last-child { border-bottom: none; }
+.ll.ok  { color: #6AB85A; }
+.ll.err { color: #C05050; }
+.ll.inf { color: var(--amber-dim); }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-row">
+    <div class="title">DEAD AIR</div>
+    <div class="status-bar">
+      <div class="dot" id="sDot"></div>
+      <span id="sTxt">standby</span>
+    </div>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <div class="tab active" onclick="showTab('generate')" id="tab-generate">Generate</div>
+  <div class="tab" onclick="showTab('jobs')" id="tab-jobs">Jobs <span class="tab-badge" id="jobsBadge">0</span></div>
+  <div class="tab" onclick="showTab('settings')" id="tab-settings">Settings</div>
+</div>
+
+<div class="panels">
+
+  <!-- ── GENERATE PANEL ─────────────────────────────────────── -->
+  <div class="panel active" id="panel-generate">
+
+    <div class="section">
+      <div class="section-label">Mode</div>
+      <div class="toggle-row">
+        <span class="toggle-text">First-Last Frame (FLF2V)</span>
+        <label class="toggle">
+          <input type="checkbox" id="flfToggle" onchange="toggleFLF()">
+          <span class="tslider"></span>
+        </label>
+      </div>
+
+      <div id="stdImgWrap">
+        <label>Reference Image</label>
+        <div class="img-zone" id="zone-single">
+          <input type="file" accept="image/*" onchange="pickImg(this,'single')">
+          <div class="img-zone-icon" id="icon-single">⬡</div>
+          <div class="img-zone-hint" id="hint-single">Tap to select</div>
+          <img id="prev-single">
+          <div class="img-fname" id="name-single"></div>
+        </div>
+      </div>
+
+      <div id="flfImgWrap" style="display:none">
+        <div class="img-pair">
+          <div class="img-zone-wrap">
+            <div class="img-zone-label">First Frame</div>
+            <div class="img-zone" id="zone-flf1">
+              <input type="file" accept="image/*" onchange="pickImg(this,'flf1')">
+              <div class="img-zone-icon" id="icon-flf1">⬡</div>
+              <div class="img-zone-hint" id="hint-flf1">Start</div>
+              <img id="prev-flf1">
+              <div class="img-fname" id="name-flf1"></div>
+            </div>
+          </div>
+          <div class="img-zone-wrap">
+            <div class="img-zone-label">Last Frame</div>
+            <div class="img-zone" id="zone-flf2">
+              <input type="file" accept="image/*" onchange="pickImg(this,'flf2')">
+              <div class="img-zone-icon" id="icon-flf2">⬡</div>
+              <div class="img-zone-hint" id="hint-flf2">End</div>
+              <img id="prev-flf2">
+              <div class="img-fname" id="name-flf2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Prompts</div>
+      <div class="field">
+        <label>Positive</label>
+        <textarea id="prompt" placeholder="dust particles drifting slowly in amber lamplight..."></textarea>
+      </div>
+      <div class="field">
+        <label>Negative</label>
+        <textarea id="negPrompt" style="min-height:56px">photorealistic, hyperrealistic, live action, text, watermark, blurry, motion blur, lens flare, noise, grain, DSLR, photography, faces</textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Parameters</div>
+      <div class="field-row">
+        <div class="field"><label>Width</label><input type="number" id="width" value="832"></div>
+        <div class="field"><label>Height</label><input type="number" id="height" value="480"></div>
+      </div>
+      <div class="field">
+        <label>Frames — <span id="framesV">97</span></label>
+        <input type="range" id="frames" min="33" max="193" step="8" value="97" oninput="document.getElementById('framesV').textContent=this.value">
+      </div>
+      <div class="field">
+        <label>Steps — <span id="stepsV">30</span></label>
+        <input type="range" id="steps" min="10" max="50" step="1" value="30" oninput="document.getElementById('stepsV').textContent=this.value">
+      </div>
+      <div class="field">
+        <label>CFG — <span id="cfgV">7.0</span></label>
+        <input type="range" id="cfg" min="1" max="12" step="0.5" value="7" oninput="document.getElementById('cfgV').textContent=parseFloat(this.value).toFixed(1)">
+      </div>
+      <div class="field">
+        <label>Seed</label>
+        <input type="number" id="seed" value="1984">
+      </div>
+    </div>
+
+    <button class="gen-btn" id="genBtn" onclick="generate()">
+      <span class="gen-btn-text" id="genBtnTxt">GENERATE</span>
+    </button>
+
+    <div style="height:12px"></div>
+    <div class="log-box" id="logBox"></div>
+
+  </div>
+
+  <!-- ── JOBS PANEL ─────────────────────────────────────────── -->
+  <div class="panel" id="panel-jobs">
+    <div class="jobs-empty" id="jobsEmpty">No jobs yet</div>
+    <div id="jobsList"></div>
+  </div>
+
+  <!-- ── SETTINGS PANEL ────────────────────────────────────── -->
+  <div class="panel" id="panel-settings">
+    <div class="section">
+      <div class="section-label">API</div>
+      <div class="field">
+        <label>RunPod Endpoint ID</label>
+        <input type="text" id="endpointId" placeholder="abc1def2ghi3" autocomplete="off" spellcheck="false" autocorrect="off">
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="rpa_xxxxxxxxxxxx" autocomplete="off">
+      </div>
+      <button class="gen-btn" onclick="saveSettings()" style="margin:12px 0 0; width:100%">
+        <span class="gen-btn-text">SAVE</span>
+      </button>
+    </div>
+    <div class="section">
+      <div class="section-label">Notifications</div>
+      <button class="gen-btn" onclick="requestNotifs()" style="margin:0; width:100%">
+        <span class="gen-btn-text">ENABLE NOTIFICATIONS</span>
+      </button>
+      <div class="settings-note" style="margin-top:10px">
+        Enable to get notified when a job completes even if the app is closed.
+        On iOS, add to home screen first for full PWA support.
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">About</div>
+      <div class="settings-note">
+        Dead Air — Wan2.2 I2V generation interface.<br>
+        Add to home screen for full app experience.<br><br>
+        Jobs are stored locally in your browser.
+        Videos are downloaded when you open a completed job.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── JOB DETAIL MODAL ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">JOB DETAIL</div>
+      <button class="modal-close" onclick="closeModal()">✕ CLOSE</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ── DB ────────────────────────────────────────────────────────────────────────
+let db;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('dead-air-jobs', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('jobs', { keyPath: 'jobId' });
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbPut(job) {
+  return new Promise((res, rej) => {
+    const tx  = db.transaction('jobs', 'readwrite');
+    const req = tx.objectStore('jobs').put(job);
+    req.onsuccess = () => res();
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbGetAll() {
+  return new Promise((res, rej) => {
+    const tx  = db.transaction('jobs', 'readonly');
+    const req = tx.objectStore('jobs').getAll();
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbGet(jobId) {
+  return new Promise((res, rej) => {
+    const tx  = db.transaction('jobs', 'readonly');
+    const req = tx.objectStore('jobs').get(jobId);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbUpdate(jobId, updates) {
+  return new Promise(async (res, rej) => {
+    try {
+      const job = await dbGet(jobId);
+      await dbPut({ ...job, ...updates });
+      res();
+    } catch(e) { rej(e); }
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let polling = {};
+let imgFiles = {};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  await openDB();
+  loadSettings();
+  await renderJobs();
+  resumePolling();
+  registerSW();
+});
+
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data.type === 'POLL_JOBS') resumePolling();
+        if (e.data.type === 'OPEN_JOB') openJobModal(e.data.jobId);
+      });
+    });
+  }
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem('da_config') || '{}');
+  if (s.endpointId) document.getElementById('endpointId').value = s.endpointId;
+  if (s.apiKey)     document.getElementById('apiKey').value     = s.apiKey;
+}
+
+function saveSettings() {
+  localStorage.setItem('da_config', JSON.stringify({
+    endpointId: document.getElementById('endpointId').value.trim(),
+    apiKey:     document.getElementById('apiKey').value.trim(),
+  }));
+  setStatus('settings saved', 'ok');
+  setTimeout(() => setStatus('standby', ''), 2000);
+}
+
+function getConfig() {
+  const s = JSON.parse(localStorage.getItem('da_config') || '{}');
+  return { endpointId: s.endpointId || '', apiKey: s.apiKey || '' };
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+async function requestNotifs() {
+  if (!('Notification' in window)) { addLog('Notifications not supported', 'err'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') { addLog('Notifications enabled', 'ok'); }
+  else { addLog('Notification permission denied', 'err'); }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── FLF toggle ────────────────────────────────────────────────────────────────
+function toggleFLF() {
+  const on = document.getElementById('flfToggle').checked;
+  document.getElementById('stdImgWrap').style.display  = on ? 'none' : 'block';
+  document.getElementById('flfImgWrap').style.display  = on ? 'block' : 'none';
+}
+
+// ── Image picking ─────────────────────────────────────────────────────────────
+function pickImg(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  imgFiles[key] = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img  = document.getElementById('prev-' + key);
+    const icon = document.getElementById('icon-' + key);
+    const hint = document.getElementById('hint-' + key);
+    const name = document.getElementById('name-' + key);
+    img.src = e.target.result;
+    img.classList.add('show');
+    icon.classList.add('hide');
+    hint.classList.add('hide');
+    name.textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Image resize ──────────────────────────────────────────────────────────────
+function resizeImage(file, maxW = 1280, quality = 0.82) {
+  return new Promise(res => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale  = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => res(blob), 'image/jpeg', quality);
+    };
+    img.src = url;
+  });
+}
+
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function addLog(msg, type = '') {
+  const box = document.getElementById('logBox');
+  box.classList.add('show');
+  const d = document.createElement('div');
+  d.className = 'll ' + type;
+  const ts = new Date().toLocaleTimeString('en-GB', {hour12:false});
+  d.textContent = `[${ts}] ${msg}`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setStatus(txt, state) {
+  document.getElementById('sTxt').textContent = txt;
+  document.getElementById('sDot').className = 'dot' + (state ? ' ' + state : '');
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generate() {
+  const { endpointId, apiKey } = getConfig();
+  if (!endpointId || !apiKey) {
+    showTab('settings');
+    addLog('Set endpoint ID and API key first', 'err');
+    return;
+  }
+
+  const flf = document.getElementById('flfToggle').checked;
+  let imageB64, endImageB64;
+
+  try {
+    addLog('Compressing image(s)...', 'inf');
+    if (flf) {
+      if (!imgFiles.flf1 || !imgFiles.flf2) { addLog('Both start and end frames required', 'err'); return; }
+      imageB64    = await blobToB64(await resizeImage(imgFiles.flf1));
+      endImageB64 = await blobToB64(await resizeImage(imgFiles.flf2));
+    } else {
+      if (!imgFiles.single) { addLog('Reference image required', 'err'); return; }
+      imageB64 = await blobToB64(await resizeImage(imgFiles.single));
+    }
+  } catch(e) { addLog('Image error: ' + e.message, 'err'); return; }
+
+  const input = {
+    image_base64:    imageB64,
+    prompt:          document.getElementById('prompt').value,
+    negative_prompt: document.getElementById('negPrompt').value,
+    width:           parseInt(document.getElementById('width').value),
+    height:          parseInt(document.getElementById('height').value),
+    length:          parseInt(document.getElementById('frames').value),
+    steps:           parseInt(document.getElementById('steps').value),
+    cfg:             parseFloat(document.getElementById('cfg').value),
+    seed:            parseInt(document.getElementById('seed').value),
+    lora_pairs:      [],
+  };
+  if (flf && endImageB64) input.end_image_base64 = endImageB64;
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  document.getElementById('genBtnTxt').textContent = 'TRANSMITTING...';
+  setStatus('transmitting', 'run');
+  addLog('Submitting to ' + endpointId, 'inf');
+
+  try {
+    const res = await fetch(`https://api.runpod.ai/v2/${endpointId}/run`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input }),
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t}`); }
+    const data = await res.json();
+    const jobId = data.id;
+
+    addLog('Job submitted: ' + jobId.slice(0,16) + '...', 'inf');
+    setStatus('running', 'run');
+
+    const job = {
+      jobId,
+      endpointId,
+      apiKey,
+      status: 'pending',
+      prompt: input.prompt,
+      createdAt: Date.now(),
+      output: null,
+      error: null,
+    };
+    await dbPut(job);
+    await renderJobs();
+
+    btn.disabled = false;
+    document.getElementById('genBtnTxt').textContent = 'GENERATE';
+
+    startPoll(job);
+    showTab('jobs');
+
+  } catch(e) {
+    addLog('Failed: ' + e.message, 'err');
+    setStatus('error', 'err');
+    btn.disabled = false;
+    document.getElementById('genBtnTxt').textContent = 'GENERATE';
+  }
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────────
+function startPoll(job) {
+  if (polling[job.jobId]) return;
+  polling[job.jobId] = setInterval(() => pollJob(job.jobId, job.endpointId, job.apiKey), 8000);
+}
+
+async function resumePolling() {
+  try {
+    const jobs = await dbGetAll();
+    jobs.filter(j => j.status === 'pending').forEach(j => startPoll(j));
+  } catch(e) {}
+}
+
+async function pollJob(jobId, endpointId, apiKey) {
+  try {
+    const res  = await fetch(`https://api.runpod.ai/v2/${endpointId}/status/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const data = await res.json();
+    const status = data.status;
+
+    if (status === 'COMPLETED') {
+      clearInterval(polling[jobId]);
+      delete polling[jobId];
+      await dbUpdate(jobId, { status: 'completed', output: data.output });
+      await renderJobs();
+      setStatus('job complete', 'ok');
+      addLog('Completed: ' + jobId.slice(0,16) + '...', 'ok');
+      notify('Shot complete — tap to view');
+    } else if (status === 'FAILED') {
+      clearInterval(polling[jobId]);
+      delete polling[jobId];
+      await dbUpdate(jobId, { status: 'failed', error: data.error });
+      await renderJobs();
+      setStatus('job failed', 'err');
+      addLog('Failed: ' + (data.error || 'unknown'), 'err');
+    }
+  } catch(e) {
+    addLog('Poll error: ' + e.message, 'err');
+  }
+}
+
+function notify(msg) {
+  if (Notification.permission === 'granted') {
+    new Notification('DEAD AIR', { body: msg, icon: '/icon-192.png' });
+  }
+}
+
+// ── Jobs render ───────────────────────────────────────────────────────────────
+async function renderJobs() {
+  const jobs = (await dbGetAll()).sort((a,b) => b.createdAt - a.createdAt);
+  const list  = document.getElementById('jobsList');
+  const empty = document.getElementById('jobsEmpty');
+  const badge = document.getElementById('jobsBadge');
+
+  const pending = jobs.filter(j => j.status === 'pending').length;
+  badge.textContent = jobs.length;
+  badge.style.display = jobs.length ? 'inline-block' : 'none';
+
+  if (jobs.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+  empty.style.display = 'none';
+
+  list.innerHTML = jobs.map(j => {
+    const time = new Date(j.createdAt).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    const date = new Date(j.createdAt).toLocaleDateString('en-GB', {day:'2-digit',month:'short'});
+    const fillClass = j.status === 'completed' ? 'done' : j.status === 'failed' ? 'fail' : '';
+    return `
+      <div class="job-item" onclick="openJobModal('${j.jobId}')">
+        <div class="job-item-header">
+          <div class="job-item-id">${j.jobId.slice(0,28)}…</div>
+          <div class="job-item-status ${j.status}">${j.status}</div>
+        </div>
+        <div class="job-item-time">${date} ${time} — ${(j.prompt||'').slice(0,40)}${j.prompt&&j.prompt.length>40?'…':''}</div>
+        <div class="job-progress"><div class="job-progress-fill ${fillClass}"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Job modal ─────────────────────────────────────────────────────────────────
+async function openJobModal(jobId) {
+  const job = await dbGet(jobId);
+  if (!job) return;
+
+  const modal = document.getElementById('modal');
+  const body  = document.getElementById('modalBody');
+
+  let html = `
+    <div class="modal-field">
+      <div class="modal-label">Job ID</div>
+      <div class="modal-value" style="font-size:10px">${job.jobId}</div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">Status</div>
+      <div class="modal-value">${job.status.toUpperCase()}</div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">Prompt</div>
+      <div class="modal-value">${job.prompt || '—'}</div>
+    </div>
+  `;
+
+  if (job.status === 'completed' && job.output && job.output.video) {
+    const blob = b64ToBlob(job.output.video, 'video/mp4');
+    const url  = URL.createObjectURL(blob);
+    html += `
+      <video class="modal-video" controls playsinline src="${url}"></video>
+      <a class="modal-dl" href="${url}" download="dead_air_${job.jobId.slice(0,8)}.mp4">↓ Download MP4</a>
+    `;
+  } else if (job.status === 'failed') {
+    html += `
+      <div class="modal-field">
+        <div class="modal-label">Error</div>
+        <div class="modal-value" style="color:#C05050">${job.error || 'unknown error'}</div>
+      </div>
+    `;
+  } else {
+    html += `<div style="color:var(--amber-dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:20px 0;text-align:center">Generating…</div>`;
+  }
+
+  body.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function b64ToBlob(b64, type) {
+  const bin   = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
+</script>
+
+</body>
+</html>
